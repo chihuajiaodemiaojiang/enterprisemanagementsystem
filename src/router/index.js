@@ -1,27 +1,123 @@
-import Vue from 'vue'
-import VueRouter from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import Vue from "vue";
+import VueRouter from "vue-router";
+import Login from "@/views/Login";
+import Index from "@/views/Index";
+import axios from "axios";
 
-Vue.use(VueRouter)
+Vue.use(VueRouter);
 
 const routes = [
   {
-    path: '/',
-    name: 'home',
-    component: HomeView
+    path: "/",
+    redirect: "/login",
   },
   {
-    path: '/about',
-    name: 'about',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
-    component: () => import(/* webpackChunkName: "about" */ '../views/AboutView.vue')
-  }
-]
+    path: "/login",
+    component: Login,
+  },
+  {
+    path: "/home",
+    component: Index,
+    meta: { title: "1" },
+    children: [
+      {
+        path: "",
+        component: () => import("@/views/home/Home"),
+      },
+    ],
+  },
+  {
+    path: "/shop",
+    component: Index,
+    children: [
+      {
+        path: "",
+        meta: { title: "1" },
+        component: () => import("@/views/shop/Shop"),
+      },
+    ],
+  },
+  {
+    path: "/order",
+    component: Index,
+    children: [
+      {
+        path: "",
+        meta: { title: "1" },
+        component: () => import("@/views/order/Order"),
+      },
+    ],
+  },
+  {
+    path: "/goods",
+    component: Index,
+    meta: { title: "商品列表" },
+    redirect: "/goods/goodslist",
+    children: [
+      {
+        path: "goodsadd",
+        meta: { title: "商品添加" },
+        component: () => import("@/views/goods/GoodsAdd"),
+      },
+      {
+        path: "goodslist",
+        meta: { title: "商品列表" },
+        component: () => import("@/views/goods/GoodsList"),
+      },
+      {
+        path: "goodstype",
+        meta: { title: "商品类型" },
+        component: () => import("@/views/goods/GoodsType"),
+      },
+    ],
+  },
+  {
+    path: "/count",
+    component: Index,
+    redirect: "/count/goodscount",
+    meta: { title: "销售管理" },
+    children: [
+      {
+        path: "goodscount",
+        meta: { title: "商品统计" },
+        component: () => import("@/views/count/GoodsCount"),
+      },
+      {
+        path: "ordercount",
+        meta: { title: "订单统计" },
+        component: () => import("@/views/count/OrderCount"),
+      },
+    ],
+  },
+  {
+    path: "/account",
+    component: Index,
+    redirect: "/account/acclist",
+    meta: { title: "账号管理" },
+    children: [
+      {
+        path: "accadd",
+        meta: { title: "账号添加" },
+        component: () => import("@/views/account/AccAdd"),
+      },
+      {
+        path: "acclist",
+        meta: { title: "账号列表" },
+        component: () => import("@/views/account/AccList"),
+      },
+      {
+        path: "accedit",
+        meta: { title: "密码修改" },
+        component: () => import("@/views/account/AccEdit"),
+      },
+    ],
+  },
+];
 
 const router = new VueRouter({
-  routes
-})
+  mode: "history",
+  base: process.env.BASE_URL,
+  routes,
+});
 
-export default router
+export default router;
