@@ -32,8 +32,7 @@
 </template>
 
 <script>
-import axios from "axios";
-
+import { login_api } from "@/apis/reg.js";
 export default {
   data() {
     return {
@@ -49,7 +48,7 @@ export default {
         password: [
           { required: true, message: "请输入密码", trigger: "blur" },
           {
-            min: 6,
+            min: 5,
             max: 15,
             message: "长度在 6 到 15 个字符",
             trigger: "blur",
@@ -60,27 +59,25 @@ export default {
   },
   methods: {
     login() {
-      this.$refs.loginForm.validate((valid) => {
+      this.$refs.loginForm.validate(async (valid) => {
+        // valid就是表单验证最后的结果 一个布尔值
         if (valid) {
-          axios
-            .post("http://127.0.0.1:5000/users/checkLogin", {
-              username: this.username,
-              password: this.password,
-            })
-            .then((res) => {
-              if (res.data.code === 0) {
-                this.$message({
-                  message: "登入成功",
-                  type: "success",
-                });
-                this.$router.push("/index");
-              } else {
-                this.$message({
-                  message: "账号密码错误",
-                  type: "warning",
-                });
-              }
+          let res = await login_api({
+            account: this.loginForm.username,
+            password: this.loginForm.password,
+          });
+          let { code, msg } = res.data;
+          if (code === 0) {
+            // 弹窗
+            this.$message({
+              message: msg,
+              type: "success",
             });
+            // 跳转页面;
+            await this.$router.push("/home");
+          } else {
+            this.$message.error(msg);
+          }
         }
       });
     },
