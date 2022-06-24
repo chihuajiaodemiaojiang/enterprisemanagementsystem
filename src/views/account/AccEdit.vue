@@ -44,11 +44,35 @@
 
 <script>
 import Card from "@/components/Card";
+import { editPwd_api, checkOldPwd_api } from "@/apis/acc.js";
+import { PWD_REG } from "@/utils/reg.js";
+import local from "@/utils/local";
 export default {
   components: {
     Card,
   },
   data() {
+    let checkOldPwd = async (rules, value, callback) => {
+      if (!value) {
+        // 非空
+        callback(new Error("旧密码不能为空"));
+      } else if (!PWD_REG.test(value)) {
+        // 正则
+        callback(new Error("请输入4-12位密码"));
+      } else {
+        // 验证通过
+        let res = await checkOldPwd_api({
+          oldPwd: value,
+        });
+        let { code, msg } = res.data;
+        if (code === "00") {
+          callback();
+        } else {
+          callback(new Error(msg));
+        }
+      }
+    };
+
     var validatePass = (rule, value, callback) => {
       if (value === "") {
         callback(new Error("请输入密码"));
@@ -75,20 +99,29 @@ export default {
         newpass: "",
       },
       rules: {
-        pass: [{ validator: validatePass, trigger: "blur" }],
+        pass: [{ validator: checkOldPwd, trigger: "blur" }],
         newpass: [{ validator: validatePass, trigger: "blur" }],
         checkPass: [{ validator: validatePass2, trigger: "blur" }],
       },
     };
   },
   methods: {
-    submitForm(formName) {
-      this.$refs[formName].validate((valid) => {
+    submitForm() {
+      console.log("发请求,把所有验证都走一次");
+      this.$refs.ruleForm.validate(async (valid) => {
         if (valid) {
-          alert("submit!");
-        } else {
-          console.log("error submit!!");
-          return false;
+          // 通过了  发请求 弹窗
+          let res = await editPwd_api({
+            newPwd: this.ruleForm.newpass,
+          });
+          let { code } = res.data;
+          if (code === 0) {
+            // 修改密码成功
+            // 清空本地的token
+            local.clear();
+            // 回到登录
+            await this.$router.push("/login");
+          }
         }
       });
     },

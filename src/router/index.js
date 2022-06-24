@@ -2,9 +2,12 @@ import Vue from "vue";
 import VueRouter from "vue-router";
 import Login from "@/views/Login";
 import Index from "@/views/Index";
-
+const originalPush = VueRouter.prototype.push;
+VueRouter.prototype.push = function push(location) {
+  return originalPush.call(this, location).catch((err) => err);
+};
 Vue.use(VueRouter);
-
+import local from "@/utils/local";
 const routes = [
   {
     path: "/",
@@ -109,6 +112,11 @@ const routes = [
         meta: { title: "密码修改" },
         component: () => import("@/views/account/AccEdit"),
       },
+      {
+        path: "personel",
+        meta: { title: "个人中心" },
+        component: () => import("@/views/account/Personel"),
+      },
     ],
   },
 ];
@@ -119,4 +127,16 @@ const router = new VueRouter({
   routes,
 });
 
+router.beforeEach((to, from, next) => {
+  if (to.path === "/login") {
+    next();
+  } else {
+    let tk = local.get("tk");
+    if (tk) {
+      next();
+    } else {
+      next("/login");
+    }
+  }
+});
 export default router;

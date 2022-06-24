@@ -4,19 +4,22 @@
     <div slot="content">
       <el-table
         ref="multipleTable"
+        @selection-change="handleSelectionChange"
         :data="tableData"
         tooltip-effect="dark"
         style="width: 100%"
       >
         <el-table-column type="selection" width="55"> </el-table-column>
         <el-table-column label="账号" width="180">
-          <template slot-scope="scope">{{ scope.row.acc }}</template>
+          <template slot-scope="scope">{{ scope.row.account }}</template>
         </el-table-column>
         <el-table-column prop="name" label="用户组" width="240">
           <template slot-scope="scope">{{ scope.row.userGroup }}</template>
         </el-table-column>
         <el-table-column prop="days" label="创建日期" width="180">
-          <template slot-scope="scope">{{ scope.row.days }}</template>
+          <template slot-scope="scope">{{
+            scope.row.ctime | formatDate()
+          }}</template>
         </el-table-column>
         <el-table-column label="操作" width="180">
           <template slot-scope="scope">
@@ -24,7 +27,7 @@
             <el-button
               size="mini"
               type="danger"
-              @click="handleDelete(scope.$index, scope.row)"
+              @click="handleDelete(scope.row.id)"
               >删除</el-button
             >
           </template>
@@ -40,12 +43,12 @@
         layout="total, sizes, prev, pager, next, jumper"
       >
       </el-pagination>
-      <el-button type="primary" @click="delAll">删除选中</el-button>
+      <el-button type="primary" @click="delAll()">删除选中</el-button>
       <el-button type="danger" @click="toggleSelection">取消选择</el-button>
       <el-dialog title="编辑当前用户" :visible.sync="dialogTableVisible">
         <el-form :model="form">
           <el-form-item label="账号" :label-width="formLabelWidth">
-            <el-input v-model="form.acc" autocomplete="off"></el-input>
+            <el-input v-model="form.account" autocomplete="off"></el-input>
           </el-form-item>
           <el-form-item label="修改用户组" :label-width="formLabelWidth">
             <el-select v-model="form.userGroup" placeholder="请选择用户组">
@@ -56,9 +59,7 @@
         </el-form>
         <div slot="footer" class="dialog-footer">
           <el-button @click="dialogTableVisible = false">取 消</el-button>
-          <el-button type="primary" @click="dialogTableVisible = false"
-            >确 定</el-button
-          >
+          <el-button type="primary" @click="ok()">确 定</el-button>
         </div>
       </el-dialog>
     </div>
@@ -67,9 +68,20 @@
 
 <script>
 import Card from "@/components/Card";
+import {
+  acclist_api,
+  addacc_api,
+  delaccAll_api,
+  delacc_api,
+  editacc_api,
+} from "@/apis/acc.js";
+import moment from "moment";
 export default {
   components: {
     Card,
+  },
+  created() {
+    this.getList();
   },
   data() {
     return {
@@ -77,22 +89,9 @@ export default {
       pageSize: 5, // 每页显示多少条
       total: 2, // 总条数
       dialogTableVisible: false, // 弹窗表格是否显示
-      tableData: [
-        {
-          id: 1,
-          days: "2016-05-02",
-          acc: "王小虎",
-          userGroup: "超级管理员",
-        },
-        {
-          id: 2,
-          days: "2016-05-02",
-          acc: "王小龙",
-          userGroup: "普通管理员",
-        },
-      ],
+      tableData: [],
       form: {
-        acc: "",
+        account: "",
         userGroup: "",
       },
       formLabelWidth: "120px",
@@ -100,28 +99,91 @@ export default {
   },
 
   methods: {
+    async getList() {
+      let res = await acclist_api({
+        currentPage: this.currentPage,
+        pageSize: this.pageSize,
+      });
+      let { data, total } = res.data;
+      // 赋值
+      if (data.length === 0) {
+        if (this.currentPage > 1) {
+          this.currentPage--;
+          await this.getList();
+        }
+      }
+      this.tableData = data;
+      this.total = total;
+    },
+    handleSelectionChange(row) {
+      this.ids = row.map((item) => item.id);
+      console.log(this.ids);
+    },
     handleSizeChange(val) {
-      console.log(`每页 ${val} 条`);
+      // 把值 赋值给条数
+      this.pageSize = val;
+      // 不要忘了重绘视图哦~~~
+      this.getList();
     },
     handleCurrentChange(val) {
-      this.ids = val.map((item) => item.id);
+      this.currentPage = val;
+      // 不要忘了重绘视图哦~~~
+      this.getList();
     },
-    delAll() {
-      JSON.stringify(this.ids);
+    async delAll() {
+      if (this.ids.length !== 0) {
+        let res = await delaccAll_api({
+          ids: JSON.stringify(this.ids),
+        });
+        await this.getList();
+      } else {
+        this.$message.error("你还未选择用户");
+      }
     },
     handleEdit(index, row) {
       console.log(index, row);
     },
-    handleDelete(index, row) {
-      console.log(index, row);
+    handleDelete(id) {
+      this.$confirm("此操作将永久删除该账号, 是否继续?", "提示", {
+        confirmButtonText: "删除",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(async () => {
+          // 点了删除按钮
+          let res = await delacc_api({ id });
+          let { code } = res.data;
+          if (code === 0) {
+            // 不要忘了重绘视图哦~~~
+            await this.getList();
+          }
+        })
+        .catch(() => {
+          // 点了取消按钮
+          this.$message({
+            type: "info",
+            message: "已取消删除",
+          });
+        });
     },
     toggleSelection(rows) {
       this.$refs.multipleTable.clearSelection();
     },
-    edit(row) {
-      console.log(row);
+    async edit(row) {
       this.dialogTableVisible = true;
       this.form = row;
+    },
+    async ok() {
+      await editacc_api(this.form).then((res) => {
+        console.log(res);
+      });
+      this.getList();
+      this.dialogTableVisible = false;
+    },
+  },
+  filters: {
+    formatDate(val) {
+      return moment(val).format("YYYY-MM-DD HH:mm:ss");
     },
   },
 };

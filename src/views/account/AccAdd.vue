@@ -40,18 +40,34 @@
 
 <script>
 import Card from "@/components/Card";
+import { addacc_api } from "@/apis/acc";
+import { ACC_REG, PWD_REG } from "@/utils/reg";
 export default {
   components: {
     Card,
   },
   data() {
-    var validatePass = (rule, value, callback) => {
-      if (value === "") {
-        callback(new Error("请输入密码"));
+    let checkAcc = (rules, value, callback) => {
+      // 非空判断
+      if (!value) {
+        callback(new Error("账号不能为空"));
+      } else if (!ACC_REG.test(value)) {
+        callback(new Error("请输入4-12位之间"));
       } else {
-        if (this.ruleForm.checkPass !== "") {
-          this.$refs.ruleForm.validateField("checkPass");
-        }
+        // 所有条件都满足
+        callback();
+      }
+    };
+
+    // 验证密码
+    let checkPwd = (rules, value, callback) => {
+      if (!value) {
+        // 非空
+        callback(new Error("密码不能为空"));
+      } else if (!PWD_REG.test(value)) {
+        // 不满足正则
+        callback(new Error("请输入4-12密码"));
+      } else {
         callback();
       }
     };
@@ -62,26 +78,30 @@ export default {
         user: "",
       },
       rules: {
-        pass: [{ validator: validatePass, trigger: "blur" }],
-        account: [
-          { required: true, message: "请输入账户", trigger: "blur" },
-          {
-            min: 3,
-            max: 10,
-            message: "长度在 3 到 10 个字符",
-            trigger: "blur",
-          },
+        pass: [{ validator: checkPwd, trigger: "blur" }],
+        account: [{ validator: checkAcc, trigger: "blur" }],
+        userGroup: [
+          { required: true, message: "用户组不能为空", trigger: "blur" },
         ],
       },
     };
   },
   methods: {
     submitForm(formName) {
-      this.$refs[formName].validate((valid) => {
+      this.$refs[formName].validate(async (valid) => {
         if (valid) {
-          alert("submit!");
+          let res = await addacc_api({
+            account: this.ruleForm.account,
+            password: this.ruleForm.pass,
+            userGroup: this.ruleForm.user,
+          });
+          let { code } = res.data;
+          if (code == 0) {
+            // 跳转页面
+            this.$router.push("/account/acclist");
+          }
         } else {
-          console.log("error submit!!");
+          console.log("error submit!!!");
           return false;
         }
       });

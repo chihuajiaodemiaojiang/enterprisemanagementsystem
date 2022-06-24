@@ -32,7 +32,8 @@
 </template>
 
 <script>
-import { login_api } from "@/apis/reg.js";
+import { login_api } from "@/apis/acc.js";
+import local from "@/utils/local";
 export default {
   data() {
     return {
@@ -66,17 +67,12 @@ export default {
             account: this.loginForm.username,
             password: this.loginForm.password,
           });
-          let { code, msg } = res.data;
+          let { code, msg, token, role } = res.data;
           if (code === 0) {
             // 弹窗
-            this.$message({
-              message: msg,
-              type: "success",
-            });
+            local.set("tk", token);
             // 跳转页面;
-            await this.$router.push("/home");
-          } else {
-            this.$message.error(msg);
+            this.$router.push("/home");
           }
         }
       });

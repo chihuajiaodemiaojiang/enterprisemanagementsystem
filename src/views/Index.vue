@@ -52,17 +52,30 @@
       </el-submenu>
     </el-menu>
     <div class="right-content">
-      <el-breadcrumb separator-class="el-icon-arrow-right">
-        <el-breadcrumb-item :to="{ path: '/home' }">首页</el-breadcrumb-item>
-        <el-breadcrumb-item
-          v-for="breadCrumbItem in breadCrumbList"
-          :key="breadCrumbItem.path"
-          :to="breadCrumbItem.path"
-          v-if="breadCrumbItem.meta.title !== '1'"
-        >
-          {{ breadCrumbItem.meta.title }}
-        </el-breadcrumb-item>
-      </el-breadcrumb>
+      <div class="nav">
+        <el-breadcrumb separator-class="el-icon-arrow-right">
+          <el-breadcrumb-item :to="{ path: '/home' }">首页</el-breadcrumb-item>
+          <el-breadcrumb-item
+            v-for="breadCrumbItem in breadCrumbList"
+            :key="breadCrumbItem.path"
+            :to="breadCrumbItem.path"
+            v-if="breadCrumbItem.meta.title !== '1'"
+          >
+            {{ breadCrumbItem.meta.title }}
+          </el-breadcrumb-item>
+        </el-breadcrumb>
+        <el-dropdown @command="changeTag">
+          <span class="el-dropdown-link">
+            欢迎你,{{ info.account }}
+            <i class="el-icon-arrow-down el-icon--right"></i>
+          </span>
+          <img class="avatar" :src="info.imgUrl" />
+          <el-dropdown-menu slot="dropdown">
+            <el-dropdown-item command="personel">个人中心</el-dropdown-item>
+            <el-dropdown-item command="out">退出</el-dropdown-item>
+          </el-dropdown-menu>
+        </el-dropdown>
+      </div>
       <div class="content">
         <router-view></router-view>
       </div>
@@ -71,15 +84,53 @@
 </template>
 
 <script>
+import { getInfo_api } from "@/apis/acc.js";
+import local from "@/utils/local";
 export default {
   name: "index",
+  data() {
+    return {
+      info: {
+        account: "",
+        ctime: "",
+        id: 1,
+        imgUrl: "",
+        userGroup: "",
+      },
+    };
+  },
   methods: {
+    async getInfo() {
+      let res = await getInfo_api();
+      let { accountInfo } = res.data;
+      // 赋值的过程
+      this.info = accountInfo;
+      // 把数据存入本地
+      local.set("info", JSON.stringify(this.info));
+    },
+    changeTag(val) {
+      if (val == "personel") {
+        // 说明访问的个人中心
+        this.$router.push("/account/personel");
+      } else {
+        // 说明访问的是退出  返回登录 清空本地
+        local.clear();
+        this.$router.push("/login");
+      }
+    },
     handleOpen(key, keyPath) {
       console.log(key, keyPath);
     },
     handleClose(key, keyPath) {
       console.log(key, keyPath);
     },
+  },
+  created() {
+    this.getInfo();
+    this.$bus.$on("updateAvatar", () => {
+      // 接收到个人中心发过来的通知
+      this.getInfo();
+    });
   },
   computed: {
     breadCrumbList() {
@@ -99,11 +150,14 @@ export default {
     display: flex;
     flex-direction: column;
   }
-  .el-breadcrumb {
+  .nav {
     width: 100%;
     height: 80px;
     line-height: 80px;
     padding: 0 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 }
 .el-menu-vertical-demo {
@@ -114,8 +168,15 @@ export default {
   color: #eeeeee;
 }
 .content {
+  padding: 20px;
   background: #f0f2f5;
   flex: 1;
-  padding: 26px;
+}
+.avatar {
+  width: 50px;
+  height: 50px;
+  margin-left: 15px;
+  border-radius: 50%;
+  vertical-align: middle;
 }
 </style>
